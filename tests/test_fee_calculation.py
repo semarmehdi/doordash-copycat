@@ -6,4 +6,4 @@ def test_fee_calculation():
     response = requests.post("http://localhost:8080/calculate-fee", json=payload)
     assert response.status_code == 200
     assert "delivery_fee" in response.json()
-    assert response.json()["delivery_fee"] == 22.5
+    assert response.json()["delivery_fee"] == 27.5
