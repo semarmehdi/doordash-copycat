@@ -1,0 +1,53 @@
+name: Test API Doordash Copycat
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    # env:
+    #   # SOURCE_URL: "https://dummyjson.com/products" # This is a public API that produces dummy products
+    #   # PAGE_SIZE: "100" # dummyjson supports limit/skip pagination
+    #   # NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }} # That is an env variable that you will set in your repo
+    #   # # DO NOT hardcode tokens. Put them in Secrets.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4 # This action clones the content of the current repo into the remote runner
+
+      - name: Build the Docker image
+        run: docker build -t doordash-copycat .
+
+      - name: Run the Docker image
+        run: docker run -d -p 8080:8080 doordash-copycat
+
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API to be ready on http://localhost:8080 ..."
+          for i in {1..10}; do
+            if curl -sSf http://localhost:8080/status/ > /dev/null; then
+              echo "API is up ✅"
+              exit 0
+            fi
+            echo "API not ready yet, retrying in 3s..."
+            sleep 3
+          done
+          echo "API failed to start ❌"
+          docker logs fee-service || true
+          exit 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5 # This action installs python (version below)
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install -r tests/requirements.txt # It installs all the necessary dependencies from requirements.txt
+
+      - name: Run tests
+        run: pytest tests/
